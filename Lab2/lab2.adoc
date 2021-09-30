@@ -75,7 +75,7 @@ image::7.png[]
 
 * В *main* добавим код для зажигания светодиода. Перед этим подключим нужные библиотеки.
 
-[source,с]
+[source, c]
 ----
 #include "rccregisters.hpp" // for RCC
 #include "gpioaregisters.hpp" //for Gpioa
