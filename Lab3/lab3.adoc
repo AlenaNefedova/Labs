@@ -57,25 +57,22 @@ int main()
   for(;;)
   {
 
-      GPIOA::ODR::ODR5::High::Set();
-      GPIOC::ODR::ODR5::High::Set();
-      delay(1000000);
-      GPIOA::ODR::ODR5::Low::Set();
-      GPIOC::ODR::ODR5::Low::Set();
-      delay(1000000);
-      GPIOC::ODR::ODR8::High::Set();
-      GPIOC::ODR::ODR8::High::Set();
-      delay(1000000);
-      GPIOC::ODR::ODR8::Low::Set();
-      delay(1000000);
-      GPIOC::ODR::ODR9::High::Set();
-      delay(1000000);
-      GPIOC::ODR::ODR9::Low::Set();
-      delay(1000000);
-      GPIOA::ODR::ODR5::High::Set();
-      delay(1000000);
-      GPIOA::ODR::ODR5::Low::Set();
-      delay(1000000);
+     GPIOC::ODR::ODR5::High::Set();
+     delay(1000000);
+     GPIOC::ODR::ODR5::Low::Set();
+     delay(1000000);
+     GPIOC::ODR::ODR8::High::Set();
+     delay(1000000);
+     GPIOC::ODR::ODR8::Low::Set();
+     delay(1000000);
+     GPIOC::ODR::ODR9::High::Set();
+     delay(1000000);
+     GPIOC::ODR::ODR9::Low::Set();
+     delay(1000000);
+     GPIOA::ODR::ODR5::High::Set();
+     delay(1000000);
+     GPIOA::ODR::ODR5::Low::Set();
+     delay(1000000);
   }
 
   return 1;
@@ -145,25 +142,22 @@ int main()
   for(;;)
   {
 
-      GPIOA::ODR::ODR5::High::Set();
-      GPIOC::ODR::ODR5::High::Set();
-      delay(1000000);
-      GPIOA::ODR::ODR5::Low::Set();
-      GPIOC::ODR::ODR5::Low::Set();
-      delay(1000000);
-      GPIOC::ODR::ODR8::High::Set();
-      GPIOC::ODR::ODR8::High::Set();
-      delay(1000000);
-      GPIOC::ODR::ODR8::Low::Set();
-      delay(1000000);
-      GPIOC::ODR::ODR9::High::Set();
-      delay(1000000);
-      GPIOC::ODR::ODR9::Low::Set();
-      delay(1000000);
-      GPIOA::ODR::ODR5::High::Set();
-      delay(1000000);
-      GPIOA::ODR::ODR5::Low::Set();
-      delay(1000000);
+     GPIOC::ODR::ODR5::High::Set();
+     delay(1000000);
+     GPIOC::ODR::ODR5::Low::Set();
+     delay(1000000);
+     GPIOC::ODR::ODR8::High::Set();
+     delay(1000000);
+     GPIOC::ODR::ODR8::Low::Set();
+     delay(1000000);
+     GPIOC::ODR::ODR9::High::Set();
+     delay(1000000);
+     GPIOC::ODR::ODR9::Low::Set();
+     delay(1000000);
+     GPIOA::ODR::ODR5::High::Set();
+     delay(1000000);
+     GPIOA::ODR::ODR5::Low::Set();
+     delay(1000000);
   }
 
   return 1;
