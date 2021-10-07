@@ -1,0 +1,5 @@
+:imagesdir: Images
+:figure-caption: Рисунок
+== Лабораторная работа 3
+
+=== Задание
