@@ -40,10 +40,11 @@ int main()
     GPIOC::MODER::MODER8::Output::Set();
     GPIOC::MODER::MODER9::Output::Set();
 
+    uint32_t* ptrPaOdr = reinterpret_cast<uint32_t*>(0x40020014);
+    uint32_t* ptrPcOdr = reinterpret_cast<uint32_t*>(0x40020814);
+
     for(;;)
     {
-        uint32_t* ptrPaOdr = reinterpret_cast<uint32_t*>(0x40020014);
-
         *ptrPaOdr ^= static_cast<uint32_t>(1 << 5);
 
         //1 << 5 = 000000b | 000010000b = 000010000b
@@ -53,20 +54,11 @@ int main()
         *ptrPaOdr &=~ static_cast<uint32_t>(1 << 5);
         */
 
-        uint32_t* ptrPcOdr = reinterpret_cast<uint32_t*>(0x40020814);
-
-        *ptrPcOdr ^= static_cast<uint32_t>(1 << 5);
-        *ptrPcOdr ^= static_cast<uint32_t>(1 << 9);
-        *ptrPcOdr ^= static_cast<uint32_t>(1 << 8);
-
-
+        *ptrPcOdr ^=static_cast<uint32_t>((1 << 5) | (1 << 8) | (1 << 9));
         delay(1000000);
+
         *ptrPaOdr ^= static_cast<uint32_t>(1 << 5);
-        *ptrPcOdr ^= static_cast<uint32_t>(1 << 5);
-        *ptrPcOdr ^= static_cast<uint32_t>(1 << 9);
-        *ptrPcOdr ^= static_cast<uint32_t>(1 << 8);
-        delay(1000000);
-    }
+        *ptrPcOdr ^=static_cast<uint32_t>((1 << 5) | (1 << 8) | (1 << 9));
 
     return 1;
 }
