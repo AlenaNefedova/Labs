@@ -122,6 +122,7 @@ int main()
   {
     if(GPIOC::IDR::IDR13::Low::IsSet() && flag == 0)
     {
+      delay(300000);
       flag = 1;
 
       GPIOA::ODR::ODR5::High::Set();
@@ -131,6 +132,7 @@ int main()
     }
     else if(GPIOC::IDR::IDR13::Low::IsSet() && flag == 1)
     {
+      delay(300000);
       flag = 0;
 
       GPIOA::ODR::ODR5::Low::Set();
