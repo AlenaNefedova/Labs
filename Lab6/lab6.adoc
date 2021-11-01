@@ -108,39 +108,61 @@ GPIOC::MODER::MODER13::Input::Set();
 
 === 4 Код программы
 
-Из регистра входных данных GPIOx_IDR считывается состояние входа порта. Есть 2 состояния Low и High. Low соответсвует нажатию кнопки.
+Из регистра входных данных GPIOx_IDR считывается состояние входа порта. Есть 2 состояния Low и High. Low соответсвует нажатию кнопки, High отжатию.
 
-Тогда код программы по включению и выключению светодиодов при нажатии кнопки выглядит следующим образом:
+Тогда код программы по включению и выключению светодиодов при отжатии кнопки выглядит следующим образом:
 
 [source,c]
 ----
 int main()
 {
-  int flag = 0;
+    int flag = 0;
+    int tick = 0;
+    int tick1 = 0;
 
-  for(;;)
-  {
-    if(GPIOC::IDR::IDR13::Low::IsSet() && flag == 0)
+    for(;;)
     {
-      delay(300000);
-      flag = 1;
+      if(GPIOC::IDR::IDR13::Low::IsSet() && flag == 0)
+      {
+        tick1++;
+        flag = 1;
 
-      GPIOA::ODR::ODR5::High::Set();
-      GPIOC::ODR::ODR5::High::Set();
-      GPIOC::ODR::ODR8::High::Set();
-      GPIOC::ODR::ODR9::High::Set();
-    }
-    else if(GPIOC::IDR::IDR13::Low::IsSet() && flag == 1)
-    {
-      delay(300000);
-      flag = 0;
+       if(tick1%2 == 0)
+       {
+         GPIOA::ODR::ODR5::High::Set();
+         GPIOC::ODR::ODR5::High::Set();
+         GPIOC::ODR::ODR8::High::Set();
+         GPIOC::ODR::ODR9::High::Set();
+       }
+       else
+       {
+          GPIOA::ODR::ODR5::Low::Set();
+          GPIOC::ODR::ODR5::Low::Set();
+          GPIOC::ODR::ODR8::Low::Set();
+          GPIOC::ODR::ODR9::Low::Set();
+       }
+      }
+      else if(GPIOC::IDR::IDR13::High::IsSet() && flag == 1)
+      {
+        tick++;
+        flag = 0;
 
-      GPIOA::ODR::ODR5::Low::Set();
-      GPIOC::ODR::ODR5::Low::Set();
-      GPIOC::ODR::ODR8::Low::Set();
-      GPIOC::ODR::ODR9::Low::Set();
+        if(tick%2 == 0)
+        {
+          GPIOA::ODR::ODR5::Low::Set();
+          GPIOC::ODR::ODR5::Low::Set();
+          GPIOC::ODR::ODR8::Low::Set();
+          GPIOC::ODR::ODR9::Low::Set();
+        }
+        else
+        {
+          GPIOA::ODR::ODR5::High::Set();
+          GPIOC::ODR::ODR5::High::Set();
+          GPIOC::ODR::ODR8::High::Set();
+          GPIOC::ODR::ODR9::High::Set();
+        }
+      }
     }
-  }
 
   return 1;
 }
@@ -225,29 +247,53 @@ extern "C"
 
 int main()
 {
-  int flag = 0;
+    int flag = 0;
+    int tick = 0;
+    int tick1 = 0;
 
-  for(;;)
-  {
-    if(GPIOC::IDR::IDR13::Low::IsSet() && flag == 0)
+    for(;;)
     {
-      flag = 1;
+      if(GPIOC::IDR::IDR13::Low::IsSet() && flag == 0)
+      {
+        tick1++;
+        flag = 1;
 
-      GPIOA::ODR::ODR5::High::Set();
-      GPIOC::ODR::ODR5::High::Set();
-      GPIOC::ODR::ODR8::High::Set();
-      GPIOC::ODR::ODR9::High::Set();
-    }
-    else if(GPIOC::IDR::IDR13::Low::IsSet() && flag == 1)
-    {
-      flag = 0;
+       if(tick1%2 == 0)
+       {
+         GPIOA::ODR::ODR5::High::Set();
+         GPIOC::ODR::ODR5::High::Set();
+         GPIOC::ODR::ODR8::High::Set();
+         GPIOC::ODR::ODR9::High::Set();
+       }
+       else
+       {
+          GPIOA::ODR::ODR5::Low::Set();
+          GPIOC::ODR::ODR5::Low::Set();
+          GPIOC::ODR::ODR8::Low::Set();
+          GPIOC::ODR::ODR9::Low::Set();
+       }
+      }
+      else if(GPIOC::IDR::IDR13::High::IsSet() && flag == 1)
+      {
+        tick++;
+        flag = 0;
 
-      GPIOA::ODR::ODR5::Low::Set();
-      GPIOC::ODR::ODR5::Low::Set();
-      GPIOC::ODR::ODR8::Low::Set();
-      GPIOC::ODR::ODR9::Low::Set();
+        if(tick%2 == 0)
+        {
+          GPIOA::ODR::ODR5::Low::Set();
+          GPIOC::ODR::ODR5::Low::Set();
+          GPIOC::ODR::ODR8::Low::Set();
+          GPIOC::ODR::ODR9::Low::Set();
+        }
+        else
+        {
+          GPIOA::ODR::ODR5::High::Set();
+          GPIOC::ODR::ODR5::High::Set();
+          GPIOC::ODR::ODR8::High::Set();
+          GPIOC::ODR::ODR9::High::Set();
+        }
+      }
     }
-  }
 
   return 1;
 }
