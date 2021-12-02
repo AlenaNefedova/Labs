@@ -226,7 +226,7 @@ class All : public IMode
 };
 ----
 
-Код класса *Chess* (режим Шахматка):
+* Код класса *Chess* (режим Шахматка):
 
 [source,c]
 ----
@@ -323,6 +323,7 @@ void delayMs(uint32_t value)
 ----
 
 * Листинг кода функции *main*:
+
 [source,c]
 ----
 #include "rccregisters.hpp" // for RCC
