@@ -283,15 +283,15 @@ USART2::CR1::TE::Enable::Set();
 
     // Запуск преобразования на регулярном канале
 
-    ADC1::CR2::JSWSTART::On::Set();
+    ADC1::CR2::SWSTART::On::Set();
 
     // Дождемся пока преобразование не завершится
-    while(ADC1::SR::JEOC::ConversionNotComplete::IsSet())
+    while(ADC1::SR::EOC::ConversionNotComplete::IsSet())
     {
     }
 
     // Получаем код с ADC
-    data = ADC1::JDR1::Get(); //Get data from ADC;
+    data = ADC1::DR::Get(); //Get data from ADC;
 
     // Преобразуем код АЦП в температуру
 
@@ -459,7 +459,7 @@ image::11.png[]
 
 === ПРИЛОЖЕНИЯ
 
-Полный листинг кода раздела 2:
+Полный листинг кода раздела 3:
 
 [source,c]
 ----
