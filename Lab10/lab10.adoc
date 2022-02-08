@@ -44,7 +44,7 @@ image::1.png[]
 .Регистр TIM2_PSC
 image::2.png[]
 
-Делитель определяется следующим образом:
+* Делитель определяется следующим образом:
 [source,c]
 ----
 constexpr auto SystemClock = 8'000'000U;
@@ -90,3 +90,150 @@ NVIC::ISER0::Write(1 << 28U);    //Разрешить глобальное пр�
 TIM2::DIER::UIE::Enable::Set();
 TIM2::CR1::CEN::Enable::Set();
 ----
+
+Класс прерывания описан в файле interrupthandler.hpp. В функции для таймера TIM2 в данном файле используется регистр статуса *TIMx_SR*, где устанавливается флаг прерывания (UIF).
+Если он активен, то выключает прерывание и включается светодиод.
+
+.Флаг прерывания регистра статуса
+image::6.png[]
+
+* Листинг кода файла *interrupthandler.hpp*:
+
+[source,c]
+----
+//
+// Created by Sergey on 21.11.2019.
+//
+
+#ifndef REGISTERS_INTERRUPTHANDLER_HPP
+#define REGISTERS_INTERRUPTHANDLER_HPP
+
+
+#include "tim2registers.hpp"  //for TIM2
+#include "gpiocregisters.hpp"  //for GPIOC
+#include "messagetransmitter.h" // for MessageTransmitter
+
+class InterruptHandler {
+  public:
+    static void DummyHandler() { for(;;) {} }
+    static void Timer2Handler()
+    {
+      //
+      if (TIM2::SR::UIF::UpdatePending::IsSet())
+      {
+        TIM2::SR::UIF::NoUpdate::Set();
+        GPIOC::ODR::Toggle(1 << 8) ;
+      }
+    }
+};
+
+#endif //REGISTERS_INTERRUPTHANDLER_HPP
+----
+
+Чтобы прерывание работало необходимо задать использование данной функции в файле *startup.cpp*, в котором после закомментрированной строчки *//External Interrupts* отсчитать 28 позиций (для TIM2) и записать туда функцию Timer2Handler.
+
+Листинг кода *startup.cpp*:
+[source,c]
+----
+#include "interrupthandler.hpp"  //for InterruptHandler
+
+extern "C" void __iar_program_start(void) ;
+
+using tIntFunct = void(*)();
+using tIntVectItem = union {tIntFunct __fun; void * __ptr;};
+#pragma segment = "CSTACK"
+#pragma location = ".intvec"
+const tIntVectItem __vector_table[] =
+{
+  { .__ptr = __sfe( "CSTACK" ) }, //????????????? ????????? ?? ????
+    __iar_program_start, //????? ??????? ????? ????? ? ?????????
+
+  InterruptHandler::DummyHandler,
+  InterruptHandler::DummyHandler,
+  InterruptHandler::DummyHandler,
+  InterruptHandler::DummyHandler,
+  InterruptHandler::DummyHandler,
+  0,
+  0,
+  0,
+  0,
+  InterruptHandler::DummyHandler,
+  InterruptHandler::DummyHandler,
+  0,
+  InterruptHandler::DummyHandler,
+  InterruptHandler::DummyHandler,
+  //External Interrupts
+  InterruptHandler::DummyHandler,         //Window Watchdog
+  InterruptHandler::DummyHandler,         //PVD through EXTI Line detect/EXTI16
+  InterruptHandler::DummyHandler,   //Tamper and Time Stamp/EXTI21
+  InterruptHandler::DummyHandler,         //RTC Wakeup/EXTI22
+  InterruptHandler::DummyHandler,         //FLASH
+  InterruptHandler::DummyHandler,         //RCC
+  InterruptHandler::DummyHandler,         //EXTI Line 0
+  InterruptHandler::DummyHandler,         //EXTI Line 1
+  InterruptHandler::DummyHandler,         //EXTI Line 2
+  InterruptHandler::DummyHandler,         //EXTI Line 3
+  InterruptHandler::DummyHandler,         //EXTI Line 4
+  InterruptHandler::DummyHandler,         //DMA1 Stream 0
+  InterruptHandler::DummyHandler,        //DMA1 Stream 1
+  InterruptHandler::DummyHandler,        //DMA1 Stream 2
+  InterruptHandler::DummyHandler,        //DMA1 Stream 3
+  InterruptHandler::DummyHandler,       //DMA1 Stream 4
+  InterruptHandler::DummyHandler,      //DMA1 Stream 5
+  InterruptHandler::DummyHandler,      //DMA1 Stream 6
+  InterruptHandler::DummyHandler,              //ADC1
+  0,   //USB High Priority
+  0,    //USB Low  Priority
+  0,               //DAC
+  0,              //COMP through EXTI Line
+  InterruptHandler::DummyHandler,         //EXTI Line 9..5
+  InterruptHandler::DummyHandler,              //TIM9/TIM1 Break interrupt
+  InterruptHandler::DummyHandler,             //TIM10/TIM1 Update interrupt
+  InterruptHandler::DummyHandler,             //TIM11/TIM1 Trigger/Commutation interrupts
+  InterruptHandler::DummyHandler,			   //TIM1 Capture Compare interrupt
+  InterruptHandler::Timer2Handler,         //TIM2 28
+};
+
+extern "C" void __cmain(void) ;
+extern "C" __weak void __iar_init_core(void) ;
+extern "C" __weak void __iar_init_vfp(void) ;
+
+#pragma required = __vector_table
+void __iar_program_start(void) {
+  __iar_init_core() ;
+  __iar_init_vfp() ;
+  __cmain() ;
+}
+----
+
+==== 1.2 Работа с таймером TIM3
+
+Настройка таймера производится аналогично таймеру . Нужно поменять верхний предел отсчета таймера до 500 мс, чтобы светодиод моргал раз в 0,5 с. Согласно
+таблицы прерываний TIM3 находится на позиции 29, то есть в регистр  *NVIC_ISER0* записываем номер 29 и в файле *startup.cpp* в 29 строчку записать функцию *Timer3Handler*.
+
+Листинг настройки таймера TIM3.
+[source,c]
+----
+//Настройка таймера 3
+RCC::APB1ENR::TIM3EN::Enable::Set();
+TIM3::PSC::Write(TimerPrescaler);
+TIM3::ARR::Write(500);
+TIM3::CNT::Write(0);
+NVIC::ISER0::Write(1 << 29U);    //Разрешить глобальное прерывание
+TIM3::DIER::UIE::Enable::Set();
+TIM3::CR1::CEN::Enable::Set();
+----
+
+Листинг функции прерывания для таймера TIM3.
+[source,c]
+----
+static void Timer3Handler()
+    {
+      if (TIM3::SR::UIF::UpdatePending::IsSet())
+      {
+        TIM3::SR::UIF::NoUpdate::Set();
+        GPIOC::ODR::Toggle(1 << 5) ;
+      }
+    }
+----
+
