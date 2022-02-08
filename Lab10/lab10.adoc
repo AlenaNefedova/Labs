@@ -237,3 +237,149 @@ static void Timer3Handler()
     }
 ----
 
+*Результат работы* программы:
+
+.Моргание светодиодов
+image::1.gif[]
+=== 2. Передача сообщения по интерфейсу USART
+
+==== 2.1 Структура программы в *StarUML*.
+
+.Структура программы
+image::7.png[]
+
+* Программа будет включать функцию отправки сообщения *Send(message: string&)*, которая будет передавать каждый бит в массив *buffer*, из которого посимвольно будет передаватся сообщение через USART.
+
+* Функция *OnByteTransmitte()* отвечает за передачу символов, пока их количество не станет равным количеству символов введенной переменной. Иначе запрещает передачу по интерфейсу USART.
+
+* Переменная *isMessageTransmit* нужна для того, чтобы проверить отослалось ли все сообщение или нет. Переменная *byteCounter* используется для подсчета кол-ва символов, а *messageLenght* определяет длину сообщения.
+
+==== 2.2 Реализация программы
+
+Создаем папку *MessageTransmitter* и два файла _messagetransmitter.h_ и _messagetransmitter.cpp_ и прописываем путь к данным файлам в разделе _Options_.
+
+В первом файле будут описаны переменные и функции, которые используются в программе, а во втором - функции.
+
+Листинг кода файла *messagetransmitter.cpp*:
+
+[source,c]
+----
+#include "messagetransmitter.h"
+#include "usart2registers.hpp" // for USART2
+
+void MessageTransmitter::Send(const std::string& message)
+{
+  if(isMessageTransmit)
+  {
+    isMessageTransmit = false;
+    //Скопировать строку в буфер
+    std::copy_n(message.begin(), message.size(), buffer.begin());
+    byteCouter = 0;
+    messageLenght = message.size();
+
+    USART2::DR::Write(buffer[byteCouter]);
+    USART2::CR1::TE::Enable::Set();     //Разрешаем передачу
+    USART2::CR1::TXEIE::Enable::Set();  //Разрешаем передачу по опустошению регистра
+
+    byteCouter++;
+  }
+}
+
+void MessageTransmitter::OnByteTransmit()
+{
+  if(byteCouter <= messageLenght)
+  {
+    USART2::DR::Write(buffer[byteCouter]);
+    byteCouter++;
+  }
+  else
+  {
+    isMessageTransmit = true;
+    USART2::CR1::TE::Disable::Set();     //Запрет на передачу
+    USART2::CR1::TXEIE::Disable::Set();  //Запрещаем передачу по опустошению регистра
+  }
+}
+----
+
+Листинг кода файла *messagetransmitter.h* представлен ниже:
+[source,c]
+----
+#pragma once
+#include <string> // for std::string
+#include <array> // for std::array
+
+class MessageTransmitter
+{
+public:
+  static void Send(const std::string& message);
+  static void OnByteTransmit();
+private:
+  inline static bool isMessageTransmit = true;
+  inline static std::array<uint8_t, 255> buffer = {};
+  inline static size_t byteCouter = 0U;
+  inline static size_t messageLenght = 0U;
+};
+----
+
+В файле *main.cpp* подключим необходимые библиотеки.
+[source,c]
+----
+#include "usart2registers.hpp"  //for USART2
+#include <string> //for std::string
+#include "messagetransmitter.h" //for MessageTransmitter
+----
+
+Также в файле *main.c* необходимо настроить интерфейс *USART* (см. лабораторную работу 9). Согласно таблице прерываний интерфейс *USART2* находится на позиции 38, то тут уже используется регистр *NVIC_ISER1*.
+
+.Позиция в таблице прерываний для USART2
+image::8.png[]
+
+Листинг настройки *USART2* приведен ниже.
+[source,c]
+----
+//Настройка USART2
+
+//Порт А к системе тактирования
+
+RCC::AHB1ENR::GPIOAEN::Enable::Set();
+
+//Порт А2 и А3 на альтернативный режим работы
+
+GPIOA::MODER::MODER2::Alternate::Set();
+GPIOA::MODER::MODER3::Alternate::Set();
+
+//Назначение портов А2 и А3 на альтернативную функцию 7
+GPIOA::AFRL::AFRL2::Af7::Set();  // USART2 Tx
+GPIOA::AFRL::AFRL3::Af7::Set();  // USART2 Rx
+
+//Подключаем USART2 к системе тактирования APB1
+RCC::APB1ENR::USART2EN::Enable::Set();
+
+USART2::CR1::OVER8::OversamplingBy8::Set();
+USART2::CR1::M::Data8bits::Set();
+USART2::CR1::PCE::ParityControlDisable::Set();
+
+USART2::BRR::Write(8'000'000 / 9600); // 8 МГц с внешнего генератора HSE
+USART2::CR1::UE::Enable::Set();
+
+NVIC::ISER1::Write(1 << 6U);    //Разрешить глобальное прерывание
+----
+
+Листинг кода функции *main*:
+[source,c]
+----
+int main(void)
+{
+  std::string TestMessage = "Hello world! ";
+
+  for(;;)
+  {
+    MessageTransmitter::Send(TestMessage);
+  }
+}
+----
+
+Вывод сообщения через интерфейс *USART* в терминал:
+
+.Вывод сообщения "Hello world!" в Terminal v1.9
+image::9.png[]
