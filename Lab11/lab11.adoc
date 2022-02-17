@@ -1,0 +1,353 @@
+:imagesdir: Images
+:figure-caption: Рисунок
+:table-caption: Таблица
+:toc:
+:toc-title: ОГЛАВЛЕНИЕ:
+== Лабораторная работа 11
+
+
+
+=== Задание:
+
+* Осуществить моргание светодиодами с помощью кнопки и без нее с применением операционных систем реального времени.
+
+
+=== 1. Введение в операционные системы реального времени
+
+Под *операционной системой реального времени (ОСРВ или RTOS)* подразумевают систему, предназначенную для обеспечения интерфейса к ресурсам критических по времени систем реального времени. Основной задачей в таких системах является своевременность (timeliness) выполнения обработки данных.
+
+*Задачей ОСРВ* является обеспечение реакции на определенное действие за отведенный квант времени. Для разных задач этот квант имеет разное значение (для математического моделирования может составлять несколько мкс, а для управления производством, например, несколько минут).
+
+*Временем реакции систем на события* называют интервал времени от события на объекте и до выполнения первой интструкции в программе обработки этого события.
+
+*ОСРВ* значительно упрощают разработку софта. Одной из задач систем реального рвемени является _многозадачность_, поэтому их следует применять:
+
+* если нужно выполнять разные задачи: например сложный математический расчет, передача данных, вывод их на дисплей, проведение косвенных измерений и т.д;
+* если нужно гарантировать время отклика;
+* если программа может разрастись в неизвестных пределах.
+
+*ОСРВ* не следует применять в слишком простых задачах, т.к. это приведет к ненужной избыточности, как полученного кода, так и решения самой задачи.
+
+Существует несколько видов многозадачности:
+
+* *Кооперативная* - следующая задача не выполнится, пока полностью не завершена предыдущая;
+* *Вытесняющая* - более высоко-приоритетная задача может вытеснить менее приоритетную.
+
+Принцип работы и запуска задачи похож на принцип работы прерывания, только вместо прерываний используются задачи, которые вызываются планировщиком каждый раз по прерыванию системного таймера (раз в 1 мс или 10 мс, чем меньше тем лучше) или при непосредственном вызове планировщика. Принцип работы показан на рисунке 1.
+
+.Принцип переключния задач в ОСРВ
+image::1.png[]
+
+* Когда приходит системный тик (квант времени), вызывается планировщик задач и выбирает готовую к работе задачу, если их несколько выбирает высокоприоритетную. В этом случае он прерывает работу низкоприоритетной задачи и вызывает задачу с большим приоритетом. По завершению задачи снова вызывается планировщик и и выбирается снова высокоприоритетная задача, если их нет то возвращается к задаче Task1().
+
+*FreeRTOS* — многозадачная операционная система реального времени (ОСРВ) для встраиваемых систем. Портирована на несколько микропроцессорных архитектур.
+
+*FreeRTOS* написана на СИ с небольшим количеством ассемблерного кода и ее ядро представлено всего 3-мя файлами.
+
+Так как мы будем работать именно с *FreeRTOS*, то надо подключить бибилиотеку:
+[source,c]
+----
+#include "rtos.hpp"         // for Rtos
+----
+=== 2. Структура программы в *StarUML*
+
+Структура программы представлена на рисунке 2.
+
+.Структура программы
+image::2.png[]
+
+Каждя задача и ее назначение будет описана ниже.
+
+
+=== 3. Реализация программы
+
+Создаем папку *MyTasks* и 6 файлов с именами такими же как имя классов *ledtask*, *buttontask* и *myfirsttask* форматов *.h* и *.cpp*. В первом файле опишем все переменные и функции, которые используются в программе, а во втором опишем функции.
+
+==== 3.1 Задача MyFirstTask и MySecondTask
+
+Для моргания светодиодом создаем класс для задачи *MyFirstTask*, который будет наследовать класс *Thread* c виртуальным методом Execute, в котором мы будем моргать светодиодом и засыпать на 1 секунду.
+
+Виртуальный метод Execute мы делаем публичным  и переопределяем его.
+
+Листинг кода файла *myfirsttask.h*:
+[source,c]
+----
+#pragma once
+
+#include "thread.hpp" //for Thread
+
+class MyFirstTask: public OsWrapper::Thread<200>
+{
+public:
+  void Execute() override;
+};
+----
+
+В файле *myfirsttask.cpp* мы описываем переопределенный метод *Execute*. При вызове данной задачи загорается светодиод на линии *C8*, а с помощью функции *Sleep* (есть еще функция SleepUntil) задача "засыпает" на *1000 мс*.
+
+Листинг кода файла *myfirsttask.cpp* представлен ниже:
+[source,c]
+----
+#include "myfirsttask.h"
+#include "gpiocregisters.hpp"
+
+void MyFirstTask::Execute()
+{
+  for(;;)
+  {
+    // Моргание светодиода
+    GPIOC::ODR::Toggle(1 << 8);
+    Sleep(1000ms);
+  }
+}
+----
+
+Дополнительно можно сделать, чтобы у нас моргало 2 светодиода с частотой 1,5 с. Создадим новую задачу.
+
+.Структура в *StarUML*
+image::3.png[]
+
+* Делается аналогично как 1 задача.
+
+Листинг кода файла *mysecondtask.h*:
+[source,c]
+----
+#pragma once
+
+#include "thread.hpp" //for Thread
+
+class MySecondTask: public OsWrapper::Thread<200>
+{
+public:
+void Execute() override;
+};
+----
+
+В файле *mysecondtask.cpp* при вызове данной задачи загорается светодиод на линии *C8* и *C9*, а с помощью функции *SleepUntil* задача "засыпает" на *1500 мс*.
+
+Листинг кода файла *mysecondtask.cpp* представлен ниже:
+[source,c]
+----
+#include "mysecondtask.h"
+#include "gpiocregisters.hpp"
+
+void MySecondTask::Execute()
+{
+  for(;;)
+  {
+    // Моргание светодиода
+    GPIOC::ODR::Toggle(1 << 8);
+    GPIOC::ODR::Toggle(1 << 9);
+    SleepUntil(1500ms);
+  }
+}
+----
+
+==== 3.2 Задача ButtonTask
+
+Это задача опроса кнопок (при нажатии на кнопку посылает событие в систему). Так как это задача, то она наследуется классом *Thread*.
+
+Также у нас есть атрибут *Event*, в котором будет храниться ссылка на событие, которое мы передадим в конструктор. Но мы будем использовать вместо него *MailBox* (он имеет тип и размер), который используется для передачи сообщений (например через USART).
+
+Опишем конструктор класса *ButtonTask*:
+
+Листинг кода файла *buttontask.h* представлен ниже:
+[source,c]
+----
+#pragma once
+
+#include "thread.hpp" //for Thread
+#include "event.hpp" //for Event
+#include "mailbox.hpp" //for MailBox
+
+class ButtonTask: public OsWrapper::Thread<100>
+{
+public:
+  ButtonTask(OsWrapper::MailBox<int, 1>& mailBox): buttonMailBox(mailBox)
+  {
+  }
+  void Execute() override;
+
+private:
+  OsWrapper::MailBox<int, 1>& buttonMailBox;
+  int myMessage = 1;
+};
+----
+
+В файле *buttontask.cpp* проверяем нажатие кнопки и если кнопка нажата записываем сообщение в созданную переменную в *buttontask.h* с помощью метода *Put*, и усыпляем программу на *200 ms*.
+
+Листинг кода файла *buttontask.cpp* представлен ниже:
+[source,c]
+----
+#include "buttontask.h"
+#include "gpiocregisters.hpp" //for GPIOC
+
+void ButtonTask::Execute()
+{
+  for(;;)
+  {
+    if(GPIOC::IDR::IDR13::Low::IsSet())  //Проверка на нажатие
+    {
+      buttonMailBox.Put(myMessage);
+    }
+    Sleep(200ms);
+  }
+}
+----
+
+
+==== 3.3 Задача LedTask
+
+Задача *LedTask* должна ожидать прихода события EventButtonPress и если оно пришло, то переключить светодиод.
+
+Опишем конструктор класса *LedTask*, используя *MailBox* и переопределим метод Execute.
+
+Листинг кода файла *ledtask.h* представлен ниже:
+[source,c]
+----
+#pragma once
+
+#include "thread.hpp" //for Thread
+#include "event.hpp"  //for Event
+#include "mailbox.hpp" //for MailBox
+
+class LedTask: public OsWrapper::Thread<100>
+{
+public:
+  LedTask(OsWrapper::MailBox<int, 1>& mailBox): buttonMailBox(mailBox)
+  {
+  }
+  void Execute() override;
+
+private:
+  OsWrapper::MailBox<int, 1>& buttonMailBox;
+  int myMessage = 1;
+};
+----
+
+Далее в файле *ledtask.cpp* опишем метод *Execute*. Мы  проверяем приход события нажатия кнопки в течении *500 мс* и если событие нажатия кнопки пришло, то включаем светодиоды на линии *C5*, *C9*, а затем усыпляем программу на *200 ms*.
+
+Листинг кода файла *ledtask.cpp* представлен ниже:
+[source,c]
+----
+#include "ledtask.h"
+#include "gpiocregisters.hpp" //for GPIOC
+
+void LedTask::Execute()
+{
+  for(;;)
+  {
+    if(buttonMailBox.Get(myMessage, 500ms))  //Проверка на приход события нажатия кнопки
+    {
+      GPIOC::ODR::Toggle(1 << 9);
+      GPIOC::ODR::Toggle(1 << 5);
+    }
+    Sleep(200ms);
+  }
+}
+----
+
+==== 3.4 Функция *main*
+
+В файле *main.cpp* для начала подключим необходимые библиотеки для задач и создадим объекты классов *MailBox*, *ButtonTask*, *LedTask*, *MyFirstTask* и *MySecondTask*:
+[source,c]
+----
+OsWrapper::MailBox<int, 1> buttonMailBox;
+ButtonTask buttonTask(buttonMailBox);
+LedTask ledTask(buttonMailBox);
+MyFirstTask myFirstTask;
+MySecondTask mySecondTask;
+----
+
+В нашей работе используется ОСРВ *RTOS*, поэтому в  функции *main* указываем задачи (название задачи и приоритет (нормальный или высокий) и запускаем систему *RTOS*:
+[source,c]
+----
+Rtos::CreateThread(myFirstTask, "MyFirstTask", ThreadPriority::highest);
+Rtos::CreateThread(mySecondTask, "MySecondTask", ThreadPriority::highest);
+Rtos::CreateThread(buttonTask, "ButtonTask", ThreadPriority::normal);
+Rtos::CreateThread(ledTask, "LedTask", ThreadPriority::normal);
+Rtos::Start();
+----
+
+Листинг кода файла *main.cpp*:
+[source,c]
+----
+#include "rtos.hpp"         // for Rtos
+#include "mailbox.hpp"      // for Mailbox
+#include "event.hpp"        // for Event
+
+#include "mytask.hpp"       // for MyTask
+#include "led1task.hpp"     // for Led1Task
+#include "myfirsttask.h"    // for MyFirstTask
+#include "mysecondtask.h"   // for MySecondTask
+#include "buttontask.h"    // for ButtonTask
+#include "ledtask.h"    // for LedTask
+#include "rccregisters.hpp" // for RCC
+
+#include "Application/Diagnostic/GlobalStatus.hpp"
+#include <gpioaregisters.hpp>  // for GPIOA
+#include <gpiocregisters.hpp>  // for GPIOC
+
+std::uint32_t SystemCoreClock = 16'000'000U;
+
+
+extern "C" {
+int __low_level_init(void)
+{
+  //Switch on external 16 MHz oscillator
+  RCC::CR::HSION::On::Set();
+  while (RCC::CR::HSIRDY::NotReady::IsSet())
+  {
+
+  }
+  //Switch system clock on external oscillator
+  RCC::CFGR::SW::Hsi::Set();
+  while (!RCC::CFGR::SWS::Hsi::IsSet())
+ {
+
+  }
+  //Switch on clock on PortA and PortC
+  RCC::AHB1ENRPack<
+      RCC::AHB1ENR::GPIOCEN::Enable,
+      RCC::AHB1ENR::GPIOAEN::Enable
+  >::Set();
+
+  RCC::APB2ENR::SYSCFGEN::Enable::Set();
+
+  //LED1 on PortA.5, set PortA.5 as output
+  GPIOA::MODER::MODER5::Output::Set();
+
+  /* LED2 on PortC.9, LED3 on PortC.8, LED4 on PortC.5 so set PortC.5,8,9 as output */
+  GPIOC::MODERPack<
+      GPIOC::MODER::MODER5::Output,
+      GPIOC::MODER::MODER8::Output,
+      GPIOC::MODER::MODER9::Output
+  >::Set();
+
+  return 1;
+}
+}
+
+OsWrapper::MailBox<int, 1> buttonMailBox;
+ButtonTask buttonTask(buttonMailBox);
+LedTask ledTask(buttonMailBox);
+MyFirstTask myFirstTask;
+MySecondTask mySecondTask;
+
+int main()
+{
+  using namespace OsWrapper;
+
+  Rtos::CreateThread(myFirstTask, "MyFirstTask", ThreadPriority::highest);
+  Rtos::CreateThread(buttonTask, "ButtonTask", ThreadPriority::normal);
+  Rtos::CreateThread(ledTask, "LedTask", ThreadPriority::normal);
+  Rtos::Start();
+
+  return 0;
+}
+
+----
+
+
+
+.Результат выполнения программы
