@@ -281,3 +281,10 @@ OsWrapper::Mutex USARTMutex;
 SendMessageTask<USART2> sendMessageTask1(message1, 100ms);
 SendMessageTask<USART2> sendMessageTask2(message2, 110ms);
 ----
+
+=== 5. Результат выполнения программы (корректный вывод сообщения)
+
+Запустим выполнение программы и посмотрим как передались сообщения в Терминал.
+
+.Корректный вывод сообщений в Терминал
+image::3.png[]
