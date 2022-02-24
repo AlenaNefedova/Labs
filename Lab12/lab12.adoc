@@ -25,7 +25,7 @@ image::1.png[]
 
 === 2. Реализация программы (файл *sendmessagetask.h*)
 
-С помощью шаблона *template<typename TUSART>*  в класс будем передавать (для нашего задания) *USART2*.
+С помощью шаблона *template<typename TUSART>*  в класс будем передавать *USART2* (для нашего задания).
 
 Листинг кода файла *sendmessagetask.h* представлен ниже:
 [source,c]
