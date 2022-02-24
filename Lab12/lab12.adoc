@@ -23,7 +23,7 @@
 .Структура программы
 image::1.png[]
 
-=== 2. Реализация программы
+=== 2. Реализация программы (файл *sendmessagetask.h*)
 
 С помощью шаблона *template<typename TUSART>*  в класс будем передавать (для нашего задания) *USART2*.
 
@@ -72,6 +72,8 @@ void SendMessageTask<TUSART>::Execute()
   }
 }
 ----
+
+=== 3. Реализация программы (файл *main.cpp*)
 
 В файле *main.cpp* нужно создать переменные в которые мы запишем наши сообщения:
 
@@ -189,8 +191,93 @@ int main()
   return 0;
 }
 ----
-
+=== 3. Результат выполнения программы (некорректный вывод сообщения)
 Запустим выполнение программы и посмотрим как передались сообщения в Терминал.
 
 .Результат работы программы
 image::2.png[]
+
+* Видим, что сообщения передаются некорректно, скорее всего это вызвано неправильной работой приоритетов.
+
+* Чтобы сообщения передавались правильно, т.е. сначала передается одно сообщение, потом другое, можно воспользоваться классом *Mutex*. Он управляет синхронизацией потоков.
+
+=== 4. Реализация программы с помощью класса Mutex
+
+Для синхронизации передачи наших сообщений нужно:
+
+* добавить в файл *sendmessagetask.h* бибилотеку для класса *Mutex*,
+* глобально объявить объект класса *Mutex USARTMutex*,
+
+* произвести захват Mutex на 200 мс с помощью функции *Lock*,
+
+* после того как сообщение будет передано производится высвобождение Mutex функцией *UnLock*.
+
+Листинг кода файла *sendmessagetask.h*:
+
+[source,c]
+----
+#pragma once
+
+#include "thread.hpp" //for Thread
+#include "mutex.hpp" //for Mutex
+
+extern OsWrapper::Mutex USARTMutex;
+template<typename TUSART>
+class SendMessageTask: public OsWrapper::Thread<200>
+{
+public:
+  SendMessageTask(const char* message, std::chrono::milliseconds delay): sendMessage(message), delayTask(delay)
+  {
+  }
+  void Execute() override;
+private:
+  const char* sendMessage = nullptr;
+  const char* ptr;
+  std::chrono::milliseconds delayTask;
+};
+
+template<typename TUSART>
+void SendMessageTask<TUSART>::Execute()
+{
+  TUSART::CR1::TE::Enable::Set();
+
+  for(;;)
+  {
+    // Захват мьютекса
+    USARTMutex.Lock(200);
+    ptr = sendMessage;
+
+    while(*ptr!=0)
+    {
+      // Передача сообщения по USART
+      TUSART::DR::Write(*ptr);
+      while(TUSART::SR::TXE::DataRegisterNotEmpty::IsSet())
+      {
+      }
+
+      ptr++;
+    }
+    // Освобождение мьютекса
+    USARTMutex.UnLock();
+
+    Sleep(delayTask);
+  }
+}
+----
+
+* В файле *main.cpp* добавим библиотеку
+
+[source,c]
+----
+#include "mutex.hpp" // for Mutex
+----
+
+А также объявим объект класса *Mutex USARTMutex* перед тем как создали объекты класса *SendMessageTask*.
+
+[source,c]
+----
+OsWrapper::Mutex USARTMutex;
+
+SendMessageTask<USART2> sendMessageTask1(message1, 100ms);
+SendMessageTask<USART2> sendMessageTask2(message2, 110ms);
+----
