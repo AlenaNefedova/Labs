@@ -1,0 +1,98 @@
+:imagesdir: Images
+:figure-caption: Рисунок
+:table-caption: Таблица
+:toc:
+:toc-title: ОГЛАВЛЕНИЕ:
+== Class Voltage
+
+=== 1. Структура программы в StarUML
+
+Для того, чтобы найти напряжение, соотвествующее определенному коду, полученному с АЦП создаем класс Voltage.
+
+Так как в работе используется линейный потенциометр, то напряжение можно рассчитать по формуле:
+
+image::0.png[]
+
+
+* Коэффициент *k* рассчитается по следующей формуле:
+
+k = (maxVoltage - minVoltage)/(maxCode - minCode).
+
+* Коэффициент *b* рассчитается по следующей формуле:
+
+b = minVoltage - minCode * (maxVoltage - minVoltage)/(maxCode - minCode).
+
+* Для рассчета этих параметров нужны значения минимального и максимального напряжения, получаемые с помощью потенциометра (их мы замерим с помощью мультиметра). А также значения минимального и максимального кода АЦП. В работе используется 12-битный АЦП, следовательно, значения minCode = 0, а maxCode = 4095.
+
+* В методе **convertToVolt **рассчитывается текущее значение напряжения по указанной выше формуле.
+
+* Архитектура класса Voltage показана на рисунке 1.
+
+.Структура программы в StarUML
+image::1.png[]
+
+=== 2. Реализация класса
+
+Код файла *voltage.cpp*:
+[source,c]
+----
+#include "voltage.h"
+
+float Voltage::ConvertToVolt(uint32_t data)
+{
+float result = 0.0F;
+float k = (maxVolt - minVolt)/(maxCode - minCode); //for coef K
+float b = minVolt - minCode * (maxVolt - minVolt)/(maxCode - minCode); //for coef B
+result = k * data + b;
+return result;
+}
+----
+
+Код файла *voltage.h*:
+[source,c]
+----
+#pragma once
+#include <cstdint>
+
+class Voltage
+{
+public:
+constexpr Voltage(const float maxV, const float minV, const uint32_t maxC, const uint32_t minC): maxVolt(maxV), minVolt(minV), maxCode(maxC), minCode(minC)
+{
+}
+float ConvertToVolt(uint32_t data);
+private:
+const float maxVolt = 3.0F; //for maximumVoltage
+const float minVolt = 0.0F; //for minimumVoltage
+const uint32_t maxCode = 4095; //for maximumCode
+const uint32_t minCode = 0U; //for minimumCode
+};
+----
+
+Проверим как преобразуется наприжение. Введем код например 1000, 200 и 3873.
+
+Код файла *main.cpp*:
+[source,c]
+----
+#include "voltage.h" //for Voltage
+#include <iostream>
+
+using namespace std;
+
+Voltage volt(3, 0, 4095, 0);
+
+int main()
+{
+cout << volt.ConvertToVolt(1000) << endl;
+
+cout << volt.ConvertToVolt(200) << endl;
+
+cout << volt.ConvertToVolt(3873) << endl;
+
+return 0;
+}
+----
+
+Полученные напряжения:
+
+image::2.png[]
