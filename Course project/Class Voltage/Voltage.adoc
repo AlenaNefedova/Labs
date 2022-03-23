@@ -33,6 +33,19 @@ image::1.png[]
 
 === 2. Реализация класса
 
+Код файла *voltage.cpp*:
+[source,c]
+----
+#include "voltage.h"
+
+float Voltage::ConvertToVolt(uint32_t data)
+{
+  float result = 0.0F;
+  result = static_cast<float>(k * data + b);
+  return result;
+}
+----
+
 Код файла *voltage.h*:
 [source,c]
 ----
@@ -41,13 +54,14 @@ image::1.png[]
 
 class Voltage
 {
-public:
-float ConvertToVolt(uint32_t data, float k, float b)
-{
-float result = 0.0F;
-result = static_cast<float>(k * data + b);
-return result;
-}
+  public:
+  constexpr Voltage(const float coefK, const float coefB): k(coefK), b(coefB)
+  {
+  }
+  float ConvertToVolt(uint32_t data);
+  private:
+  const float k = 0.0F;
+  const float b = 0.0F;
 };
 ----
 
@@ -61,10 +75,6 @@ return result;
 
 using namespace std;
 
-Voltage volt;
-
-int main()
-{
 const float maxVolt = 3.0F; //for maximumVoltage
 const float minVolt = 0.0F; //for minimumVoltage
 const uint32_t maxCode = 4095; //for maximumCode
@@ -73,11 +83,15 @@ const uint32_t minCode = 0U; //for minimumCode
 const float k = (maxVolt - minVolt)/(maxCode - minCode); //for coef K
 const float b = minVolt - minCode * (maxVolt - minVolt)/(maxCode - minCode); //for coef B
 
-float u = volt.ConvertToVolt(3873, k, b);
+Voltage volt(k, b);
 
-cout << u << endl;
+int main()
+{
+  float u = volt.ConvertToVolt(3873);
 
-return 0;
+  cout << u << endl;
+
+  return 0;
 }
 ----
 
