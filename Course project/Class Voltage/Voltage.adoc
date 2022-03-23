@@ -40,9 +40,7 @@ image::1.png[]
 
 float Voltage::ConvertToVolt(uint32_t data)
 {
-  float result = 0.0F;
-  result = static_cast<float>(k * data + b);
-  return result;
+  return k * static_cast<float>(data) + b;
 }
 ----
 
@@ -55,13 +53,19 @@ float Voltage::ConvertToVolt(uint32_t data)
 class Voltage
 {
   public:
-  constexpr Voltage(const float coefK, const float coefB): k(coefK), b(coefB)
-  {
-  }
-  float ConvertToVolt(uint32_t data);
+    constexpr Voltage(const float maxVolt, const float minVolt, const float maxCode, const float minCode):
+              k(((maxCode - minCode) != 0) ? (maxVolt - minVolt)/(maxCode - minCode) : 1),
+              b(((maxCode - minCode) != 0) ? (minVolt - minCode) * (maxVolt - minVolt)/(maxCode - minCode): 0)
+    {
+    }
+    float ConvertToVolt(uint32_t data);
   private:
-  const float k = 0.0F;
-  const float b = 0.0F;
+    const float maxVolt = 0.0F;
+    const float minVolt = 0.0F;
+    const uint32_t maxCode = 0U;
+    const uint32_t minCode = 0U;
+    const float k = 0.0F;
+    const float b = 0.0F;
 };
 ----
 
@@ -75,15 +79,7 @@ class Voltage
 
 using namespace std;
 
-const float maxVolt = 3.0F; //for maximumVoltage
-const float minVolt = 0.0F; //for minimumVoltage
-const uint32_t maxCode = 4095; //for maximumCode
-const uint32_t minCode = 0U; //for minimumCode
-
-const float k = (maxVolt - minVolt)/(maxCode - minCode); //for coef K
-const float b = minVolt - minCode * (maxVolt - minVolt)/(maxCode - minCode); //for coef B
-
-Voltage volt(k, b);
+Voltage volt(3, 0, 4095, 0);
 
 int main()
 {
