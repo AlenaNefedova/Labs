@@ -60,10 +60,6 @@ class Voltage
     }
     float ConvertToVolt(uint32_t data);
   private:
-    const float maxVolt = 0.0F;
-    const float minVolt = 0.0F;
-    const uint32_t maxCode = 0U;
-    const uint32_t minCode = 0U;
     const float k = 0.0F;
     const float b = 0.0F;
 };
