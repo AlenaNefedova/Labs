@@ -99,7 +99,7 @@ void Setup()
 
   //Копируем адрес в буфер
 
-  DMA2::S0M0AR::M0A::Set(static_cast<uint32_t ADC::*>(&ADC::buffer));
+  DMA2::S0M0AR::M0A::Set(reinterpret_cast<uint32_t>(&ADC::buffer));
 
   //Не изменяя адрес копируем из ADC1
 
