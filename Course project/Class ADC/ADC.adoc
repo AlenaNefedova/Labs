@@ -24,17 +24,12 @@ image::1.png[]
 ----
 #include "adc.h"
 
-void Setup()
+void ADC::Setup()
 {
-  //Переключение на частоту ADC1
-
-  RCC::APB2ENR::ADC1EN::Enable::Set();
-
   //Установка режима одиночного преобразования
 
   ADC1::CR1::RES::Bits12::Set();
   ADC1::CR2::CONT::SingleConversion::Set();
-  ADC1::CR2::EOCS::SingleConversion::Set();
 
   // Установка частоты дискретизации в 84 цикла для 0 канала.
 
@@ -48,9 +43,17 @@ void Setup()
 
   ADC1::SQR3::SQ1::Set(0);
 
+  // Запуск одиночного преобразования
+
+  ADC1::CR2::CONT::Set(1);
+
   // Режим DMA
 
   ADC1::CR2::DMA::Enable::Set();
+
+  // Запрос преобразований DMA
+
+  ADC1::CR2::DDS::Set(1);
 
   // Включим ADC1
 
@@ -63,109 +66,12 @@ void Setup()
 ----
 #pragma once
 #include <cstdint>
-#include "rccregisters.hpp"     //for RCC
-#include "adc1registers.hpp"    //for ADC1
+#include "adc1registers.hpp" //for ADC1
 
 class ADC
 {
 public:
-  void Setup();
-  uint32_t buffer = 0U;
+void Setup();
+static inline uint32_t buffer = 0U;
 };
 ----
-
-Код файла *dma.cpp*:
-[source,c]
-----
-#include "dma.h"
-
-void Setup()
-{
-  //Подача тактирования на DMA2
-
-  RCC::AHB1ENR::DMA2EN::Enable::Set();
-
-  //Выбор канала подачи тактирования
-
-  DMA2::S0CR::CHSEL::Set(0);
-
-  //Из периферии в память
-
-  DMA2::S0CR::DIR::Set(0);
-
-  //Копируем данные из АЦПPAR::Set(ADC1::DR::Address);
-
-  DMA2::S0PAR::PA::Set(ADC1::DR::Address);
-
-  //Копируем адрес в буфер
-
-  DMA2::S0M0AR::M0A::Set(reinterpret_cast<uint32_t>(&ADC::buffer));
-
-  //Не изменяя адрес копируем из ADC1
-
-  DMA2::S0CR::PINC::Set(0);
-
-  //Изменяем адрес памяти чтобы каждое значение записывалось
-  //в след. элемент массива
-
-  DMA2::S0CR::MINC::Set(1);
-
-  //Размер данных буфера 16 бит
-
-  DMA2::S0CR::MSIZE::Set(1);
-
-  //Включение циклического режима
-
-  DMA2::S0CR::CIRC::Set(1);
-
-  //Приоритет высокий
-
-  DMA2::S0CR::PL::Set(2);
-
-  //Отключаем FIFO
-
-  DMA2::S0FCR::FEIE::Set(0);
-
-  //Размер данных периферии
-
-  DMA2::S0CR::PSIZE::Set(1);
-
-  //Пакетная пересылка по памяти и по периферии в одиночный Single
-
-  DMA2::S0CR::MBURST::Set(0);
-  DMA2::S0CR::PBURST::Set(0);
-
-  //Включаем DMA
-
-  DMA2::S0CR::EN::Set(0);
-
-}
-----
-Код файла *dma.h*:
-[source,c]
-----
-#pragma once
-#include <cstdint>
-#include "adc.h"
-#include "dma2registers.hpp"
-
-
-class DMA
-{
-public:
-  void Setup();
-};
-----
-
-* В *main()* сначала создаем объект классов DMA и ADC. Вызываем метод *Setup()* из класса ADC, после вызываем метод *Setup()* из класса DMA. Затем из переменной *buffer* класса ADC передается код в метод  ConvertToVolt() класса Voltage.
-
-*ОШИБКИ в ХОДЕ работы*:
-
-.Ошибка 1
-image::2.png[]
-
-.Терминал отладки
-image::3.png[]
-
-.Ошибка 2
-image::4.png[]
