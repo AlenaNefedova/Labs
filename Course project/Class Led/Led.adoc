@@ -22,13 +22,11 @@ image::1.png[]
 #pragma once
 #include "gpioaregisters.hpp" //for GPIOA
 #include "gpiocregisters.hpp" //for GPIOC
-#include "rccregisters.hpp" //for RCC
 
 class Led
 {
-public:
-void toggle(uint32_t count);
-void Setup();
+ public:
+ void toggle(uint32_t count);
 };
 ----
 
@@ -47,52 +45,19 @@ void Led::toggle(uint32_t count)
 
   if(count == 4)
   {
-    GPIOA::ODR::Toggle(1U << 5U);
+   GPIOA::ODR::Toggle(1U << 5U);
   }
   if(count >= 3)
   {
-    GPIOC::ODR::Toggle(1U << 9U);
+   GPIOC::ODR::Toggle(1U << 9U);
   }
   if(count >= 2)
   {
-    GPIOC::ODR::Toggle(1U << 8U);
+   GPIOC::ODR::Toggle(1U << 8U);
   }
   if(count >= 1)
   {
-    GPIOC::ODR::Toggle(1U << 5U);
+   GPIOC::ODR::Toggle(1U << 5U);
   }
-}
-
-void Led::Setup()
-{
-  // Подключить порт А к шине тактирования
-  RCC::AHB1ENR::GPIOAEN::Enable::Set();
-
-  // Настройка порта А.5
-  GPIOA::OSPEEDR::OSPEEDR5::LowSpeed::Set();
-  GPIOA::PUPDR::PUPDR5::PullUp::Set();
-  GPIOA::OTYPER::OT5::OutputPushPull::Set();
-  GPIOA::MODER::MODER5::Output::Set();
-
-  // Подключить порт C к шине тактирования
-  RCC::AHB1ENR::GPIOCEN::Enable::Set();
-
-  // Настройка порта C.5
-  GPIOC::OSPEEDR::OSPEEDR5::LowSpeed::Set();
-  GPIOC::PUPDR::PUPDR5::PullUp::Set();
-  GPIOC::OTYPER::OT5::OutputPushPull::Set();
-  GPIOC::MODER::MODER5::Output::Set();
-
-  // Настройка порта C.8
-  GPIOC::OSPEEDR::OSPEEDR8::LowSpeed::Set();
-  GPIOC::PUPDR::PUPDR8::PullUp::Set();
-  GPIOC::OTYPER::OT8::OutputPushPull::Set();
-  GPIOC::MODER::MODER8::Output::Set();
-
-  // Настройка порта C.9
-  GPIOC::OSPEEDR::OSPEEDR9::LowSpeed::Set();
-  GPIOC::PUPDR::PUPDR9::PullUp::Set();
-  GPIOC::OTYPER::OT9::OutputPushPull::Set();
-  GPIOC::MODER::MODER9::Output::Set();
 }
 ----
