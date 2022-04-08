@@ -3,13 +3,12 @@
 :table-caption: Таблица
 :toc:
 :toc-title: ОГЛАВЛЕНИЕ:
-== Class Led
+== Class Led, ILed, Leds, Indicate
 
 === 1. Структура программы в StarUML
 
 
-* Архитектура класса Led показана на рисунке 1.
-
+* Архитектура классов Led, ILed, Leds, Indicate показана на рисунке 1.
 
 .Структура программы в StarUML
 image::1.png[]
@@ -20,44 +19,228 @@ image::1.png[]
 [source,c]
 ----
 #pragma once
-#include "gpioaregisters.hpp" //for GPIOA
-#include "gpiocregisters.hpp" //for GPIOC
+#include "iled.h" //for ILed
 
-class Led
+template<typename Port, uint32_t pinNum>
+class Led : public ILed
 {
- public:
- void toggle(uint32_t count);
+  public:
+  void switchOn() override
+  {
+    Port::ODR::Set(1U << pinNum);
+  }
+
+  void switchOff() override
+  {
+    Port::ODR::Write(0U << pinNum);
+  }
 };
 ----
 
-Код файла *led.cpp*:
+Код файла *Iled.h*:
 [source,c]
 ----
-#include "led.h" //for Led
+#pragma once
 
-void Led::toggle(uint32_t count)
+class ILed
 {
-  //Тушим светодиоды
-  GPIOA::ODR::ODR5::Low::Set();
-  GPIOC::ODR::ODR5::Low::Set();
-  GPIOC::ODR::ODR8::Low::Set();
-  GPIOC::ODR::ODR9::Low::Set();
+  public:
+  virtual void switchOn() = 0;
+  virtual void switchOff() = 0;
+};
+----
 
-  if(count == 4)
+
+Код файла *leds.h*:
+[source,c]
+----
+#pragma once
+#include "iled.h" //for ILed
+
+template<auto* ...pArgs>
+struct Leds
+{
+  ILed* pLeds[sizeof ...(pArgs)] = {pArgs...};
+  void switchOn()
   {
-   GPIOA::ODR::Toggle(1U << 5U);
+    for(auto it: pLeds)
+    {
+      it->switchOn();
+    }
   }
-  if(count >= 3)
+
+  void switchOff()
   {
-   GPIOC::ODR::Toggle(1U << 9U);
+    for(auto it: pLeds)
+    {
+      it->switchOff();
+    }
   }
-  if(count >= 2)
+};
+----
+
+Код файла *indicate.h*:
+[source,c]
+----
+#pragma once
+#include <stdint.h>
+#include <string>
+#include "iled.h" //for ILed
+
+template <auto& TLeds>
+class Indicate
+{
+  public:
+  void light(uint32_t count);
+};
+
+template <auto& TLeds>
+void Indicate<TLeds>::light(uint32_t count)
+{
+  TLeds.switchOff();
+  for(uint32_t index = 0; index < count; ++index)
   {
-   GPIOC::ODR::Toggle(1U << 8U);
-  }
-  if(count >= 1)
-  {
-   GPIOC::ODR::Toggle(1U << 5U);
+    if(count > index)
+    {
+      TLeds.pLeds[index]->switchOn();
+    }
   }
 }
 ----
+Код файла *main.cpp*:
+[source,c]
+----
+#include "usart2registers.hpp"          //for USART2
+#include <iostream>
+#include "gpioaregisters.hpp"           //for GPIOA
+#include "gpiocregisters.hpp"           //for GPIOC
+#include "rccregisters.hpp"             //for RCC
+#include "rtos.hpp"                     //for Rtos
+#include "voltagemeasuringtask.h"       //for VoltageMeasuringTask
+#include "sendvoltagetask.h"            //for SendVoltageTask
+#include "calclight.h"                  //for CalcLight
+#include "voltage.h"                    //for Voltage
+#include "stringconverter.h"            //for StringConverter
+#include "dma.h"                        //for DMA
+#include "adc.h"                        //for ADC
+#include "usart.h"                      //for USART
+#include "filter.h"                     //for Filter
+#include "iled.h"                       //for ILed
+#include "led.h"                        //for Led
+#include "leds.h"                       //for Leds
+#include "indicate.h"                   //for Indicate
+
+std::uint32_t SystemCoreClock = 16'000'000U;
+
+extern "C"
+{
+  int __low_level_init(void)
+  {
+    //Switch on external 16 MHz oscillator
+    RCC::CR::HSION::On::Set();
+    while (RCC::CR::HSIRDY::NotReady::IsSet())
+    {
+
+    }
+    //Switch system clock on external oscillator
+    RCC::CFGR::SW::Hsi::Set();
+    while (!RCC::CFGR::SWS::Hsi::IsSet())
+    {
+
+    }
+
+    // Подключить порт А к шине тактирования
+    RCC::AHB1ENR::GPIOAEN::Enable::Set();
+
+    // Настройка порта А.0
+    GPIOA::OSPEEDR::OSPEEDR0::LowSpeed::Set();
+    GPIOA::PUPDR::PUPDR0::PullUp::Set();
+    GPIOA::OTYPER::OT0::OutputPushPull::Set();
+    GPIOA::MODER::MODER0::Analog::Set();
+
+    // Настройка порта А.5
+    GPIOA::OSPEEDR::OSPEEDR5::LowSpeed::Set();
+    GPIOA::PUPDR::PUPDR5::PullUp::Set();
+    GPIOA::OTYPER::OT5::OutputPushPull::Set();
+    GPIOA::MODER::MODER5::Output::Set();
+
+    // Подключить порт C к шине тактирования
+    RCC::AHB1ENR::GPIOCEN::Enable::Set();
+
+    // Настройка порта C.5
+    GPIOC::OSPEEDR::OSPEEDR5::LowSpeed::Set();
+    GPIOC::PUPDR::PUPDR5::PullUp::Set();
+    GPIOC::OTYPER::OT5::OutputPushPull::Set();
+    GPIOC::MODER::MODER5::Output::Set();
+
+    // Настройка порта C.8
+    GPIOC::OSPEEDR::OSPEEDR8::LowSpeed::Set();
+    GPIOC::PUPDR::PUPDR8::PullUp::Set();
+    GPIOC::OTYPER::OT8::OutputPushPull::Set();
+    GPIOC::MODER::MODER8::Output::Set();
+
+    // Настройка порта C.9
+    GPIOC::OSPEEDR::OSPEEDR9::LowSpeed::Set();
+    GPIOC::PUPDR::PUPDR9::PullUp::Set();
+    GPIOC::OTYPER::OT9::OutputPushPull::Set();
+    GPIOC::MODER::MODER9::Output::Set();
+
+    //Переключение на частоту ADC1
+
+    RCC::APB2ENR::ADC1EN::Enable::Set();
+
+    return 1;
+  }
+}
+
+void delay(uint32_t value)
+{
+  for(int32_t i = 0; i < value; ++i)
+  {
+    asm volatile("");
+  }
+}
+
+CalcLight calclight(3, 0, 4);
+Voltage volt(3, 0, 4095, 0);
+
+DMA dma;
+ADC adc;
+Filter filt(100, 10);
+
+Led<GPIOC, 5U> led1;
+Led<GPIOC, 8U> led2;
+Led<GPIOC, 9U> led3;
+Led<GPIOA, 5U> led4;
+Leds<&led1, &led2, &led3, &led4> leds;
+Indicate<leds> indicate;
+
+int main(void)
+{
+  using namespace OsWrapper;
+  using namespace std;
+
+  adc.Setup();
+  dma.Setup();
+
+  // Запускаем преобразование на регулярном канале
+
+  ADC1::CR2::SWSTART::Set(1);
+
+  float u = 0.0F;
+
+  for(;;)
+  {
+    u = filt.FiltValue(volt.ConvertToVolt(adc.buffer));
+    indicate.light(calclight.Calculate(u));
+    delay(300000);
+  }
+}
+----
+
+=== 3. Результат работы программы
+
+.Результат работы программы
+image::1.gif[]
+
+
